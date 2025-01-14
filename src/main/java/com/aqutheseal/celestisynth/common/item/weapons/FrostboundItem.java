@@ -49,11 +49,8 @@ public class FrostboundItem extends SkilledSwordItem implements CSGeoItem {
 
     @Override
     public String texture(ItemStack stack) {
-        if (SkinUtil.getSkinIndex(stack) == 1) {
-            return "skin/frostbound_seabreeze";
-        } else {
-            return CSGeoItem.super.texture(stack);
-        }
+        if (SkinUtil.getSkinIndex(stack) == 1) return "skin/frostbound_seabreeze";
+        return CSGeoItem.super.texture(stack);
     }
 
     @Override
@@ -97,14 +94,13 @@ public class FrostboundItem extends SkilledSwordItem implements CSGeoItem {
     public void onUseTick(Level pLevel, LivingEntity pLivingEntity, ItemStack pStack, int pRemainingUseDuration) {
         super.onUseTick(pLevel, pLivingEntity, pStack, pRemainingUseDuration);
         int dur = this.getUseDuration(pStack) - pRemainingUseDuration;
-        if (dur % 10 == 0) {
-            for (int i = 0; i <= pLevel.random.nextInt(2); i++) {
-                if (pLivingEntity instanceof Player player) {
-                    double xx = pLevel.random.nextGaussian() * 3;
-                    double yy = pLevel.random.nextDouble() * 2;
-                    double zz = pLevel.random.nextGaussian() * 3;
-                    this.shootShard(player, pStack, xx, yy, zz);
-                }
+        if (dur % 10 != 0) return;
+        for (int i = 0; i <= pLevel.random.nextInt(2); i++) {
+            if (pLivingEntity instanceof Player player) {
+                double xx = pLevel.random.nextGaussian() * 3;
+                double yy = pLevel.random.nextDouble() * 2;
+                double zz = pLevel.random.nextGaussian() * 3;
+                this.shootShard(player, pStack, xx, yy, zz);
             }
         }
     }
@@ -131,31 +127,26 @@ public class FrostboundItem extends SkilledSwordItem implements CSGeoItem {
     public static void shootShard(CSWeaponUtil util, ItemStack stack, Player player, Level level, double xx, double yy, double zz) {
         final FrostboundSlashSkinSet skinSet = FrostboundSlashSkinSet.of(stack, player);
         ItemStack shardStack = getShard(player);
-        if (shardStack != ItemStack.EMPTY) {
-            LivingEntity target = null;
-            List<Entity> list = util.iterateEntities(level, util.createAABB(player.blockPosition().above(), 36)).stream().filter(entity -> entity instanceof LivingEntity && entity != player && player.hasLineOfSight(entity)).toList();
-            if (!list.isEmpty()) {
-                int indexLucky = level.random.nextInt(list.size());
-                if (list.get(indexLucky) instanceof LivingEntity indexLuckyLiving) {
-                    target = indexLuckyLiving;
-                }
-            }
-            if (target != null) {
-                FrostboundShard shard = new FrostboundShard(CSEntityTypes.FROSTBOUND_SHARD.get(), player, level);
-                shard.moveTo(player.getX() + xx, shard.getY() + yy, player.getZ() + zz);
-                CSEffectEntity.createInstance(player, null, skinSet.frozenShardPulseEffect(), xx, yy + 3, zz);
-                double d0 = target.getX() - (player.getX() + xx);
-                double d1 = target.getY((double) 1 / 3) - (shard.getY() + yy);
-                double d2 = target.getZ() - (player.getZ() + zz);
-                double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-                shard.shoot(d0, d1 + d3 * (double) 0.2F, d2, 1.6F, 5F);
-                level.addFreshEntity(shard);
-                if (!player.getAbilities().instabuild) {
-                    shardStack.shrink(1);
-                    if (shardStack.isEmpty()) {
-                        player.getInventory().removeItem(shardStack);
-                    }
-                }
+        if (shardStack == ItemStack.EMPTY) return;
+        LivingEntity target = null;
+        List<Entity> list = util.iterateEntities(level, util.createAABB(player.blockPosition().above(), 36)).stream().filter(entity -> entity instanceof LivingEntity && entity != player && player.hasLineOfSight(entity)).toList();
+        if (list.isEmpty()) return;
+        int indexLucky = level.random.nextInt(list.size());
+        if (list.get(indexLucky) instanceof LivingEntity indexLuckyLiving) target = indexLuckyLiving; 
+        if (target == null) return;
+        FrostboundShard shard = new FrostboundShard(CSEntityTypes.FROSTBOUND_SHARD.get(), player, level);
+        shard.moveTo(player.getX() + xx, shard.getY() + yy, player.getZ() + zz);
+        CSEffectEntity.createInstance(player, null, skinSet.frozenShardPulseEffect(), xx, yy + 3, zz);
+        double d0 = target.getX() - (player.getX() + xx);
+        double d1 = target.getY((double) 1 / 3) - (shard.getY() + yy);
+        double d2 = target.getZ() - (player.getZ() + zz);
+        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
+        shard.shoot(d0, d1 + d3 * (double) 0.2F, d2, 1.6F, 5F);
+        level.addFreshEntity(shard);
+        if (!player.getAbilities().instabuild) {
+            shardStack.shrink(1);
+            if (shardStack.isEmpty()) {
+                player.getInventory().removeItem(shardStack);
             }
         }
     }
@@ -163,17 +154,13 @@ public class FrostboundItem extends SkilledSwordItem implements CSGeoItem {
     public static ItemStack getShard(Player player) {
         Predicate<ItemStack> predicate = (p) -> p.getItem() == CSItems.WINTEREIS_SHARD.get();
         ItemStack fromHandStack = ProjectileWeaponItem.getHeldProjectile(player, predicate);
-        if (!fromHandStack.isEmpty()) {
-            return fromHandStack;
-        } else {
-            for(int i = 0; i < player.getInventory().getContainerSize(); ++i) {
-                ItemStack fromInventoryStack = player.getInventory().getItem(i);
-                if (predicate.test(fromInventoryStack)) {
-                    return fromInventoryStack;
-                }
+        if (!fromHandStack.isEmpty()) return fromHandStack;
+        for(int i = 0; i < player.getInventory().getContainerSize(); ++i) {
+            ItemStack fromInventoryStack = player.getInventory().getItem(i);
+            if (predicate.test(fromInventoryStack)) {
+                return fromInventoryStack;
             }
-
-            return player.getAbilities().instabuild ? new ItemStack(CSItems.WINTEREIS_SHARD.get()) : ItemStack.EMPTY;
         }
+        return player.getAbilities().instabuild ? new ItemStack(CSItems.WINTEREIS_SHARD.get()) : ItemStack.EMPTY;
     }
 }
